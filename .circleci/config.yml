@@ -8,8 +8,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: prepare git
+          command: pacman -Sy git cmake --noconfirm --needed
+      - run:
           name: prepare zydis
-          command:
+          command: |
             cd /data
             git clone https://github.com/zyantific/zydis
             cd zydis
@@ -18,14 +21,18 @@ jobs:
             echo "set(CMAKE_C_FLAGS  \"${CMAKE_C_FLAGS} -fPIC\")" >>../CMakeLists.txt
             cmake ..
             make
+            make install
             cp ZydisExportConfig.h ../include
+      - run:
+          name: prepare PFishHook
+          command: |
             cd /data
             git clone https://github.com/Menooker/PFishHook
             cd PFishHook
             make directories
             make lib INCLUDE=../zydis/include LIBPATH=../zydis/build
-            cp bin ../project
-      -run:
+            cp bin/* ../project
+      - run:
           name: build
           command: make
       - store_artifacts:
