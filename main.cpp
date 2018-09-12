@@ -1,9 +1,9 @@
 #include <dlfcn.h>
 #include <filesystem>
+#include <map>
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
-#include <map>
 #include <vector>
 
 #include "PFishHook.h"
@@ -24,9 +24,7 @@ struct BedrockLog {
   static void log(uint area, uint level, char const *tag, int prip, char const *content, ...);
 };
 
-extern "C" void mcpelauncher_log(uint level, char const *tag, char const *content) {
-  BedrockLog::log(0x800, level, tag, -1, "%s", content);
-}
+extern "C" void mcpelauncher_log(uint level, char const *tag, char const *content) { BedrockLog::log(0x800, level, tag, -1, "%s", content); }
 
 int mcpelauncher_hook_internal(void *sym, void *func, void **rev) {
   auto ret = HookIt(sym, rev, func);
@@ -56,7 +54,12 @@ extern "C" int mcpelauncher_hook(void *symbol, void *hook, void **original) {
   }
 }
 
-TClasslessInstanceHook(void *, _ZN15DedicatedServer5startEv) { return original(this); }
+TClasslessInstanceHook(void, _ZNSt10unique_ptrI16ChemistryOptionsSt14default_deleteIS0_EEC2EOS3_, void *cheopt) {
+  for (auto mod : mods) {
+    auto set_server = (void (*)(void *))dlsym(mod, "mod_set_server");
+    if (set_server) set_server(this);
+  }
+}
 
 void loadMods(fs::path path, std::set<fs::path> &others) {
   auto deps = getDependencies(path);
@@ -72,6 +75,8 @@ void loadMods(fs::path path, std::set<fs::path> &others) {
   printf("Loading mod: %s\n", path.stem().c_str());
   void *mod = dlopen(path.c_str(), RTLD_LAZY);
   if (mod) { mods.emplace_back(mod); }
+  auto mod_init = (void (*)(void))dlsym(mod, "mod_init");
+  if (mod_init) mod_init();
 }
 
 void loadModsFromDirectory(fs::path base) {
@@ -86,6 +91,10 @@ void loadModsFromDirectory(fs::path base) {
       modsToLoad.erase(it);
 
       loadMods(path, modsToLoad);
+    }
+    for (auto mod : mods) {
+      auto mod_exec = (void (*)(void))dlsym(mod, "mod_exec");
+      if (mod_exec) mod_exec();
     }
   }
 }
