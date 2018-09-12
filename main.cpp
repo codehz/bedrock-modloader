@@ -3,7 +3,7 @@
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 #include "PFishHook.h"
@@ -18,7 +18,7 @@ struct hook_defs {
 namespace fs = std::filesystem;
 
 static std::vector<void *> mods;
-static std::unordered_map<void *, hook_defs> hooks;
+static std::map<void *, hook_defs> *hooks;
 
 struct BedrockLog {
   static void log(uint area, uint level, char const *tag, int prip, char const *content, ...);
@@ -43,10 +43,10 @@ int mcpelauncher_hook_internal(void *sym, void *func, void **rev) {
 }
 
 extern "C" int mcpelauncher_hook(void *symbol, void *hook, void **original) {
-  auto def = hooks.find(symbol);
-  if (def == hooks.end()) {
+  auto def = hooks->find(symbol);
+  if (def == hooks->end()) {
     auto result = mcpelauncher_hook_internal(symbol, hook, original);
-    hooks.insert({ symbol, { hook, original } });
+    hooks->insert({ symbol, { hook, original } });
     return result;
   } else {
     *original             = *def->second.original;
@@ -93,6 +93,7 @@ void loadModsFromDirectory(fs::path base) {
 void mod_init(void) __attribute__((constructor));
 
 void mod_init(void) {
+  hooks = new std::map<void *, hook_defs>();
   printf("ModLoader Loading...\n");
   loadModsFromDirectory("mods");
 }
