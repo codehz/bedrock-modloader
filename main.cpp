@@ -54,7 +54,7 @@ extern "C" int mcpelauncher_hook(void *symbol, void *hook, void **original) {
   }
 }
 
-TClasslessInstanceHook(void, _ZNSt10unique_ptrI16ChemistryOptionsSt14default_deleteIS0_EEC2EOS3_, void *cheopt) {
+TClasslessInstanceHook(void, _ZN14ServerInstance19setChemistryOptionsESt10unique_ptrI16ChemistryOptionsSt14default_deleteIS1_EE, void *cheopt) {
   for (auto mod : *mods) {
     auto set_server = (void (*)(void *))dlsym(mod, "mod_set_server");
     if (set_server) set_server(this);
@@ -65,9 +65,9 @@ TClasslessInstanceHook(void, _ZNSt10unique_ptrI16ChemistryOptionsSt14default_del
 void loadMods(fs::path path, std::set<fs::path> &others) {
   auto deps = getDependencies(path);
   for (auto const &dep : deps) {
-    if (others.count(dep) > 0) {
-      auto name = path.parent_path();
-      name /= dep;
+    auto name = path.parent_path();
+    name /= dep;
+    if (others.count(name) > 0) {
       others.erase(dep);
       loadMods(name, others);
       others.erase(dep);
@@ -107,7 +107,7 @@ void loadModsFromDirectory(fs::path base) {
 void mod_init(void) __attribute__((constructor));
 
 void mod_init(void) {
-  mods = new std::vector<void *>();
+  mods  = new std::vector<void *>();
   hooks = new std::map<void *, hook_defs>();
   printf("ModLoader Loading...\n");
   loadModsFromDirectory("mods");
