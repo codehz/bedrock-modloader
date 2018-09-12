@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <dlfcn.h>
+#include <stdio.h>
 
 extern "C" int mcpelauncher_hook(void *sym, void *func, void **rev);
 static void *handle = dlopen(nullptr, RTLD_LAZY);
@@ -9,7 +9,7 @@ struct RegisterStaticHook {
   RegisterStaticHook(const char *sym, void *hook, void **org) {
     auto r = dlsym(handle, sym);
     if (r == nullptr) { printf("Symbol not found: %s\n", sym); }
-    printf("HOOK %d\n", mcpelauncher_hook(r, hook, org));
+    mcpelauncher_hook(r, hook, org);
   }
 
   // workaround for a warning

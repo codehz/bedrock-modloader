@@ -3,6 +3,7 @@
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unordered_map>
 #include <vector>
 
 #include "PFishHook.h"
@@ -10,9 +11,14 @@
 
 #include "StaticHook.h"
 
+struct hook_defs {
+  void *hook, **original;
+};
+
 namespace fs = std::filesystem;
 
 static std::vector<void *> mods;
+static std::unordered_map<void *, hook_defs> hooks;
 
 struct BedrockLog {
   static void log(uint area, uint level, char const *tag, int prip, char const *content, ...);
@@ -22,17 +28,31 @@ extern "C" void mcpelauncher_log(uint level, char const *tag, char const *conten
   BedrockLog::log(0x800, level, "ModLoader", -1, "[%s] %s", tag, content);
 }
 
-extern "C" int mcpelauncher_hook(void *sym, void *func, void **rev) {
+int mcpelauncher_hook_internal(void *sym, void *func, void **rev) {
   auto ret = HookIt(sym, rev, func);
   switch (ret) {
-  case FHSuccess: return 1;
-  case FHAllocFailed: mcpelauncher_log(5, "hook", "Hook failed: AllocFailed\n"); return 0;
-  case FHDecodeFailed: mcpelauncher_log(5, "hook", "Hook failed: DecodeFailed\n"); return 0;
-  case FHMprotectFail: mcpelauncher_log(5, "hook", "Hook failed: MProtectFailed\n"); return 0;
-  case FHPatchFailed: mcpelauncher_log(5, "hook", "Hook failed: PatchFailed\n"); return 0;
-  case FHTooManyPatches: mcpelauncher_log(5, "hook", "Hook failed: TooManyPatches\n"); return 0;
-  case FHUnrecognizedRIP: mcpelauncher_log(5, "hook", "Hook failed: UnrecognizedRIP\n"); return 0;
-  default: mcpelauncher_log(5, "hook", "Hook failed: Unknown error\n"); return 0;
+  case FHSuccess: return 0;
+  case FHAllocFailed: mcpelauncher_log(5, "hook", "Hook failed: AllocFailed\n"); return -ret;
+  case FHDecodeFailed: mcpelauncher_log(5, "hook", "Hook failed: DecodeFailed\n"); return -ret;
+  case FHMprotectFail: mcpelauncher_log(5, "hook", "Hook failed: MProtectFailed\n"); return -ret;
+  case FHPatchFailed: mcpelauncher_log(5, "hook", "Hook failed: PatchFailed\n"); return -ret;
+  case FHTooManyPatches: mcpelauncher_log(5, "hook", "Hook failed: TooManyPatches\n"); return -ret;
+  case FHUnrecognizedRIP: mcpelauncher_log(5, "hook", "Hook failed: UnrecognizedRIP\n"); return -ret;
+  default: mcpelauncher_log(5, "hook", "Hook failed: Unknown error\n"); return -ret;
+  }
+}
+
+extern "C" int mcpelauncher_hook(void *symbol, void *hook, void **original) {
+  auto def = hooks.find(symbol);
+  if (def == hooks.end()) {
+    auto result = mcpelauncher_hook_internal(symbol, hook, original);
+    hooks.insert({ symbol, { hook, original } });
+    return result;
+  } else {
+    *original             = *def->second.original;
+    *def->second.original = hook;
+    def->second           = { hook, original };
+    return 0;
   }
 }
 
