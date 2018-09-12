@@ -74,5 +74,5 @@ void mod_init(void) __attribute__((constructor));
 
 void mod_init(void) {
   printf("ModLoader Loading...\n");
-  loadModsFromDirectory("user/mods");
+  loadModsFromDirectory("mods");
 }
