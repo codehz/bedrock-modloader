@@ -68,13 +68,13 @@ void loadMods(fs::path path, std::set<fs::path> &others) {
     auto name = path.parent_path();
     name /= dep;
     if (others.count(name) > 0) {
-      others.erase(dep);
+      others.erase(name);
       loadMods(name, others);
-      others.erase(dep);
+      others.erase(name);
     }
   }
   printf("Loading mod: %s\n", path.stem().c_str());
-  void *mod = dlopen(path.c_str(), RTLD_LAZY);
+  void *mod = dlopen(path.c_str(), RTLD_NOW);
   if (!mod) {
     fprintf(stderr, "Failed to load %s: %s\n", path.stem().c_str(), dlerror());
     return;
@@ -107,6 +107,7 @@ void loadModsFromDirectory(fs::path base) {
 void mod_init(void) __attribute__((constructor));
 
 void mod_init(void) {
+  setenv("LD_LIBRARY_PATH", "./lib:./mods:.",1);
   mods  = new std::vector<void *>();
   hooks = new std::map<void *, hook_defs>();
   printf("ModLoader Loading...\n");
