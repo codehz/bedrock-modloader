@@ -1,0 +1,7 @@
+*
+!.circleci/config.yml
+!/.gitignore
+!/.clang-format
+!*.cpp
+!*.h
+!/Makefile
