@@ -1,0 +1,38 @@
+
+version: 2
+jobs:
+  build:
+    docker:
+      - image: base/devel
+    working_directory: /data/project
+    steps:
+      - checkout
+      - run:
+          name: prepare zydis
+          command:
+            cd /data
+            git clone https://github.com/zyantific/zydis
+            cd zydis
+            mkdir build
+            cd build
+            echo "set(CMAKE_C_FLAGS  \"${CMAKE_C_FLAGS} -fPIC\")" >>../CMakeLists.txt
+            cmake ..
+            make
+            cp ZydisExportConfig.h ../include
+            cd /data
+            git clone https://github.com/Menooker/PFishHook
+            cd PFishHook
+            make directories
+            make lib INCLUDE=../zydis/include LIBPATH=../zydis/build
+            cp bin ../project
+      -run:
+          name: build
+          command: make
+      - store_artifacts:
+          path: /data/project/ModLoader.so
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build

@@ -1,5 +1,5 @@
 *
-!.circleci/config.yml
+!.circleci
 !/.gitignore
 !/.clang-format
 !*.cpp
