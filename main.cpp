@@ -17,7 +17,7 @@ struct hook_defs {
 
 namespace fs = std::filesystem;
 
-static std::vector<void *> mods;
+static std::vector<void *> *mods;
 static std::map<void *, hook_defs> *hooks;
 
 struct BedrockLog {
@@ -55,10 +55,11 @@ extern "C" int mcpelauncher_hook(void *symbol, void *hook, void **original) {
 }
 
 TClasslessInstanceHook(void, _ZNSt10unique_ptrI16ChemistryOptionsSt14default_deleteIS0_EEC2EOS3_, void *cheopt) {
-  for (auto mod : mods) {
+  for (auto mod : *mods) {
     auto set_server = (void (*)(void *))dlsym(mod, "mod_set_server");
     if (set_server) set_server(this);
   }
+  original(this, cheopt);
 }
 
 void loadMods(fs::path path, std::set<fs::path> &others) {
@@ -74,7 +75,7 @@ void loadMods(fs::path path, std::set<fs::path> &others) {
   }
   printf("Loading mod: %s\n", path.stem().c_str());
   void *mod = dlopen(path.c_str(), RTLD_LAZY);
-  if (mod) { mods.emplace_back(mod); }
+  if (mod) { mods->emplace_back(mod); }
   auto mod_init = (void (*)(void))dlsym(mod, "mod_init");
   if (mod_init) mod_init();
 }
@@ -92,7 +93,7 @@ void loadModsFromDirectory(fs::path base) {
 
       loadMods(path, modsToLoad);
     }
-    for (auto mod : mods) {
+    for (auto mod : *mods) {
       auto mod_exec = (void (*)(void))dlsym(mod, "mod_exec");
       if (mod_exec) mod_exec();
     }
@@ -102,6 +103,7 @@ void loadModsFromDirectory(fs::path base) {
 void mod_init(void) __attribute__((constructor));
 
 void mod_init(void) {
+  mods = new std::vector<void *>();
   hooks = new std::map<void *, hook_defs>();
   printf("ModLoader Loading...\n");
   loadModsFromDirectory("mods");
