@@ -25,7 +25,7 @@ struct BedrockLog {
 };
 
 extern "C" void mcpelauncher_log(uint level, char const *tag, char const *content) {
-  BedrockLog::log(0x800, level, "ModLoader", -1, "[%s] %s", tag, content);
+  BedrockLog::log(0x800, level, tag, -1, "%s", content);
 }
 
 int mcpelauncher_hook_internal(void *sym, void *func, void **rev) {
