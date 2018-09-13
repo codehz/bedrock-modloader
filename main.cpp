@@ -56,13 +56,16 @@ extern "C" int mcpelauncher_hook(void *symbol, void *hook, void **original) {
 
 TClasslessInstanceHook(void, _ZN14ServerInstance17startServerThreadEv) {
   original(this);
+  std::set<void (*)(void *)> set;
   for (auto mod : *mods) {
     auto set_server = (void (*)(void *))dlsym(mod, "mod_set_server");
-    if (set_server) set_server(this);
+    if (set_server) set.insert(set_server);
   }
+  for (auto fn : set) { fn(this); }
 }
 
 void loadMods(fs::path path, std::set<fs::path> &others) {
+  static std::set<void (*)()> set;
   auto deps = getDependencies(path);
   for (auto const &dep : deps) {
     auto name = path.parent_path();
@@ -74,14 +77,17 @@ void loadMods(fs::path path, std::set<fs::path> &others) {
     }
   }
   printf("Loading mod: %s\n", path.stem().c_str());
-  void *mod = dlopen(path.c_str(), RTLD_LAZY);
+  void *mod = dlopen(path.c_str(), RTLD_NOW);
   if (!mod) {
     fprintf(stderr, "Failed to load %s: %s\n", path.stem().c_str(), dlerror());
     return;
   }
   mods->emplace_back(mod);
   auto mod_init = (void (*)(void))dlsym(mod, "mod_init");
-  if (mod_init) mod_init();
+  if (mod_init && set.count(mod_init) == 0) {
+    mod_init();
+    set.insert(mod_init);
+  }
 }
 
 void loadModsFromDirectory(fs::path base) {
@@ -97,9 +103,13 @@ void loadModsFromDirectory(fs::path base) {
 
       loadMods(path, modsToLoad);
     }
+    std::set<void (*)()> set;
     for (auto mod : *mods) {
       auto mod_exec = (void (*)(void))dlsym(mod, "mod_exec");
-      if (mod_exec) mod_exec();
+      if (mod_exec && set.count(mod_exec) == 0) {
+        mod_exec();
+        set.insert(mod_exec);
+      }
     }
   }
 }
@@ -107,7 +117,7 @@ void loadModsFromDirectory(fs::path base) {
 void mod_init(void) __attribute__((constructor));
 
 void mod_init(void) {
-  setenv("LD_LIBRARY_PATH", "./lib:./mods:.",1);
+  setenv("LD_LIBRARY_PATH", "./lib:./mods:.", 1);
   mods  = new std::vector<void *>();
   hooks = new std::map<void *, hook_defs>();
   printf("ModLoader Loading...\n");
