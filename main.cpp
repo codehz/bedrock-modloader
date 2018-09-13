@@ -74,7 +74,7 @@ void loadMods(fs::path path, std::set<fs::path> &others) {
     }
   }
   printf("Loading mod: %s\n", path.stem().c_str());
-  void *mod = dlopen(path.c_str(), RTLD_NOW);
+  void *mod = dlopen(path.c_str(), RTLD_LAZY);
   if (!mod) {
     fprintf(stderr, "Failed to load %s: %s\n", path.stem().c_str(), dlerror());
     return;
