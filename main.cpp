@@ -58,7 +58,7 @@ TClasslessInstanceHook(void, _ZN14ServerInstance17startServerThreadEv) {
   original(this);
   std::set<void (*)(void *)> set;
   for (auto mod : *mods) {
-    auto set_server = (void (*)(void *))dlsym(mod, "mcpeserver_set_server");
+    auto set_server = (void (*)(void *))dlsym(mod, "mod_set_server");
     if (set_server && set.count(set_server) == 0) {
       set_server(this);
       set.insert(set_server);
