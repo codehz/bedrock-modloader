@@ -24,7 +24,7 @@ struct BedrockLog {
   static void log(uint area, uint level, char const *tag, int prip, char const *content, ...);
 };
 
-extern "C" void mcpelauncher_log(uint level, char const *tag, char const *content) { BedrockLog::log(0x800, level, tag, -1, "%s", content); }
+extern "C" void mcpelauncher_log(uint level, char const *tag, char const *content) { BedrockLog::log(0x800, 2, tag, level, "%s", content); }
 
 int mcpelauncher_hook_internal(void *sym, void *func, void **rev) {
   auto ret = HookIt(sym, rev, func);
